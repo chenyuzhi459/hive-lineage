@@ -1,5 +1,31 @@
-logs
-target
+.idea
+*.swp
 .classpath
+.gradle/
 .project
-.settings
+.settings/
+/bin
+bin/
+build/
+.DS_Store
+.bundle/
+Gemfile.lock
+vendor/
+**/velocity.log
+/plugins
+/az-hadoop-jobtype-plugin
+/target
+
+# local & temp directories are ignored so that they can be used to store temporary files such as local testing configurations.
+local/
+temp/
+
+# Intellij files
+.idea
+*.iml
+*.ipr
+*.iws
+.ideaDataSources/
+.shelf
+# Intellij default build output directory
+out/

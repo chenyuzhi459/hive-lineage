@@ -111,18 +111,21 @@ public class LineParser {
     private void parseCurrentNode(ASTNode ast){
         if (ast.getToken() != null) {
             switch (ast.getToken().getType()) {
-		    case HiveParser.TOK_CREATETABLE: //outputtable
-		    	isCreateTable = true;
-		    	String tableOut = fillDB(BaseSemanticAnalyzer.getUnescapedName((ASTNode) ast.getChild(0)));
-		    	outputTables.add(tableOut);
-		    	MetaCache.getInstance().init(tableOut); //初始化数据，供以后使用
-		    	break;
+            	//create语句
+						case HiveParser.TOK_CREATETABLE: //outputtable
+							isCreateTable = true;
+							String tableOut = fillDB(BaseSemanticAnalyzer.getUnescapedName((ASTNode) ast.getChild(0)));
+							outputTables.add(tableOut);
+							MetaCache.getInstance().init(tableOut); //初始化数据，供以后使用
+							break;
+		    			//insert语句
             case HiveParser.TOK_TAB:// outputTable
                 String tableTab = BaseSemanticAnalyzer.getUnescapedName((ASTNode) ast.getChild(0));
                 String tableOut2 = fillDB(tableTab);
                 outputTables.add(tableOut2);
                 MetaCache.getInstance().init(tableOut2); //初始化数据，供以后使用
                 break;
+                //from语句
             case HiveParser.TOK_TABREF:// inputTable
                 ASTNode tabTree = (ASTNode) ast.getChild(0);
                 String tableInFull = fillDB((tabTree.getChildCount() == 1) ?  
@@ -709,7 +712,7 @@ public class LineParser {
             case HiveParser.TOK_INSERT:
             case HiveParser.TOK_SELECT:
                 break;
-            case HiveParser.TOK_UNION:  //合并union字段信息
+            case HiveParser.TOK_UNIONALL:  //合并union字段信息
             	mergeUnionCols();
     			processUnionStack(ast, parent); //union的子节点
             	break;
@@ -742,7 +745,7 @@ public class LineParser {
 		cols.removeAll(list); //移除已经合并的数据
 	}
 	private void processUnionStack(ASTNode ast, Tree parent) {
-		boolean isNeedAdd = parent.getType() == HiveParser.TOK_UNION;
+		boolean isNeedAdd = parent.getType() == HiveParser.TOK_UNIONALL;
 		if (isNeedAdd) {
 			if (parent.getChild(0) == ast && parent.getChild(1) != null) {//有弟节点(是第一节点)
 				//压栈

@@ -189,8 +189,11 @@ public class LineParserTest extends TestCase {
 		Set<String> outputTablesActual;
 		Set<String> inputTablesActual;
 		List<ColLine> lineListActualed;
-		String sql = "use app;insert into table dest select nvl(a.name,0) as name_al, b.ip  " +
-				"from test a join test1 b on a.ip=b.ip where a.age > 10 and b.area in (11,22) and to_date(b.date) > date_sub('20151001',7)";
+		String sql = "INSERT INTO uindex_r1aJyE6dM_project_jwfuSW0Rd (distinct_id, ms_book_channel) \n" +
+				"SELECT /*+ MAPJOIN(dc_dim_sale_name) */ dc_folio.Chkin_OldCardNO, collect_set(dc_dim_sale_name.sellername) \n" +
+				"FROM dc_folio \n" +
+				"JOIN dc_dim_sale_name ON dc_folio.BookChannelIDII = dc_dim_sale_name.sellerid  \n" +
+				"GROUP BY dc_folio.Chkin_OldCardNO";
 		List<SQLResult> srList = parse.parse(sql);
 		inputTablesExpected.add("app.test");
 		inputTablesExpected.add("app.test1");

@@ -20,7 +20,7 @@ public class MetaCache {
 	private MetaDataDao dao = new MetaDataDao();
 	private static Map<String, List<ColumnNode>> cMap = new HashMap<String, List<ColumnNode>>();
 	private static Map<String, Long> tableMap = new HashMap<String, Long>();
-	private static Map<String, Long> columnMap = new HashMap<String, Long>();
+	private static Map<String, String> columnMap = new HashMap<String, String>();
 
 	public void init(String table){
 		String[] pdt = ParseUtil.parseDBTable(table);
@@ -59,7 +59,7 @@ public class MetaCache {
 		return tableMap;
 	}
 
-	public Map<String, Long> getColumnMap() {
+	public Map<String, String> getColumnMap() {
 		return columnMap;
 	}
 }
