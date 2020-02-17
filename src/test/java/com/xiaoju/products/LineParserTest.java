@@ -22,6 +22,7 @@ public class LineParserTest extends TestCase {
 		parse = new LineParser();
 	}
 
+	//已验证通过
 	public void testParseCreateTable() throws Exception {
 		Set<String> inputTablesExpected = new HashSet<String>();
 		Set<String> outputTablesExpected = new HashSet<String>();
@@ -180,7 +181,7 @@ public class LineParserTest extends TestCase {
 	
 	/*
 	 * 支持join
-	 */
+	 */ //已验证通过
 	public void testParseJoin() throws Exception {
 		Set<String> inputTablesExpected = new HashSet<String>();
 		Set<String> outputTablesExpected = new HashSet<String>();
@@ -189,29 +190,29 @@ public class LineParserTest extends TestCase {
 		Set<String> outputTablesActual;
 		Set<String> inputTablesActual;
 		List<ColLine> lineListActualed;
-		String sql = "INSERT INTO uindex_r1aJyE6dM_project_jwfuSW0Rd (distinct_id, ms_book_channel) \n" +
-				"SELECT /*+ MAPJOIN(dc_dim_sale_name) */ dc_folio.Chkin_OldCardNO, collect_set(dc_dim_sale_name.sellername) \n" +
+		String sql = "INSERT INTO pf_dc_account (hotelid, folio_id) \n" +
+				"SELECT /*+ MAPJOIN(dc_dim_sale_name) */ dc_folio.Chkin_OldCardNO, collect_set(dc_dim_sale_name.sellername) as b1 \n" +
 				"FROM dc_folio \n" +
 				"JOIN dc_dim_sale_name ON dc_folio.BookChannelIDII = dc_dim_sale_name.sellerid  \n" +
-				"GROUP BY dc_folio.Chkin_OldCardNO";
+				"where dc_dim_sale_name.sellerid > 10 or (dc_dim_sale_name.sellerid > 100 and dc_dim_sale_name.sellerid < 200) GROUP BY dc_folio.Chkin_OldCardNO";
 		List<SQLResult> srList = parse.parse(sql);
-		inputTablesExpected.add("app.test");
-		inputTablesExpected.add("app.test1");
-		outputTablesExpected.add("app.dest");
+		inputTablesExpected.add("default.dc_folio");
+		inputTablesExpected.add("default.dc_dim_sale_name");
+		outputTablesExpected.add("default.pf_dc_account");
 		
-		conditions.add("WHERE:((app.test.age > 10 and app.test1.area in (11,22)) and to_date(app.test1.date) > date_sub('20151001',7))");
-		conditions.add("JOIN:app.test.ip = app.test1.ip");
+		conditions.add("WHERE:(default.dc_dim_sale_name.sellerid > 10 or (default.dc_dim_sale_name.sellerid > 100 and default.dc_dim_sale_name.sellerid < 200))");
+		conditions.add("JOIN:default.dc_folio.BookChannelIDII = default.dc_dim_sale_name.sellerid");
 		
 		Set<String> clone1 = clone(conditions);
 		Set<String> fromNameSet1 = new LinkedHashSet<String>();
-		fromNameSet1.add("app.test1.ip");
-		ColLine col1 = new ColLine("ip", null, fromNameSet1, clone1, null, null);
+		fromNameSet1.add("default.dc_folio.Chkin_OldCardNO");
+		ColLine col1 = new ColLine("Chkin_OldCardNO", null, fromNameSet1, clone1, null, null);
 		
 		Set<String> clone2 = clone(conditions);
-		clone2.add("COLFUN:nvl(app.test.name,0)");
+		clone2.add("COLFUN:collect_set(default.dc_dim_sale_name.sellername)");
 		Set<String> fromNameSet2 = new LinkedHashSet<String>();
-		fromNameSet2.add("app.test.name");
-		ColLine col2 =  new ColLine("name_al", null, fromNameSet2, clone2, null, null);
+		fromNameSet2.add("default.dc_dim_sale_name.sellername");
+		ColLine col2 =  new ColLine("b1", null, fromNameSet2, clone2, null, null);
 		lineSetExpected.add(col1);
 		lineSetExpected.add(col2);
 		
@@ -290,7 +291,7 @@ public class LineParserTest extends TestCase {
 	 * <p>2、子查询中字段要列出：SELECT u.id, actions.date FROM ( SELECT av.uid AS uid FROM action_video av WHERE av.date = '2010-06-03' UNION ALL SELECT ac.uid AS uid FROM action_comment ac WHERE ac.date = '2008-06-03' ) actions JOIN users u ON (u.id = actions.uid)
 	 *   =>> SELECT u.id, actions.date FROM ( SELECT av.uid AS uid, av.date as date FROM action_video av WHERE av.date = '2010-06-03' UNION ALL SELECT ac.uid AS uid, ac.date as date FROM action_comment ac WHERE ac.date = '2008-06-03' ) actions JOIN users u ON (u.id = actions.uid)
 	 * <p>3、不写字段数要一致：select id from t1 union all select id,userName from t2
-	 * */
+	 * */ //验证通过
 	public void testParseUnion() throws Exception{
 		Set<String> inputTablesExpected = new HashSet<String>();
 		Set<String> outputTablesExpected = new HashSet<String>();
@@ -299,14 +300,14 @@ public class LineParserTest extends TestCase {
 		Set<String> outputTablesActual;
 		Set<String> inputTablesActual;
 		List<ColLine> lineListActualed;
-		String sql = "use default;use app;SELECT u.id, actions.date FROM ( " +
-					    "SELECT av.id AS uid, av.date as date " +
+		String sql = "use default;use app;SELECT u.id, actions.dates FROM ( " +
+					    "SELECT av.id AS uid, av.dates as dates " +
 					    "FROM action_video av " +
-					    "WHERE av.date = '2010-06-03' " +
-					    "UNION ALL " +
-					    "SELECT ac.uid AS uid, ac.date as date " +
+					    "WHERE av.dates = '2010-06-03' " +
+					    "UNION distinct " +
+					    "SELECT ac.uid AS uid, ac.dates as dates " +
 					    "FROM fact.action_comment ac " +
-					    "WHERE ac.date = '2008-06-03' " +
+					    "WHERE ac.dates = '2008-06-03' " +
 					 ") actions JOIN users u ON (u.id = actions.uid)";
 		List<SQLResult> srList = parse.parse(sql);
 		inputTablesExpected.add("app.users");
@@ -314,8 +315,8 @@ public class LineParserTest extends TestCase {
 		inputTablesExpected.add("fact.action_comment");
 		outputTablesExpected.clear();
 		
-		conditions.add("WHERE:app.action_video.date = '2010-06-03'");
-		conditions.add("WHERE:fact.action_comment.date = '2008-06-03'");
+		conditions.add("WHERE:app.action_video.dates = '2010-06-03'");
+		conditions.add("WHERE:fact.action_comment.dates = '2008-06-03'");
 		conditions.add("JOIN:app.users.id = app.action_video.id&fact.action_comment.uid");
 		
 		Set<String> clone1 = clone(conditions);
@@ -324,9 +325,9 @@ public class LineParserTest extends TestCase {
 		ColLine col1 = new ColLine("id", null, fromNameSet1, clone1, null, null);
 		Set<String> clone2 = clone(conditions);
 		Set<String> fromNameSet2 = new LinkedHashSet<String>();
-		fromNameSet2.add("app.action_video.date");
-		fromNameSet2.add("fact.action_comment.date");
-		ColLine col2 = new ColLine("date", null, fromNameSet2, clone2, null, null);
+		fromNameSet2.add("app.action_video.dates");
+		fromNameSet2.add("fact.action_comment.dates");
+		ColLine col2 = new ColLine("dates", null, fromNameSet2, clone2, null, null);
 		lineSetExpected.add(col1);
 		lineSetExpected.add(col2);
 		

@@ -123,7 +123,19 @@ public class LineParser {
                 String tableTab = BaseSemanticAnalyzer.getUnescapedName((ASTNode) ast.getChild(0));
                 String tableOut2 = fillDB(tableTab);
                 outputTables.add(tableOut2);
-                MetaCache.getInstance().init(tableOut2); //初始化数据，供以后使用
+                int nodeCount = ast.getParent().getChildCount();
+                List<String> insertColumns = new ArrayList<String>(nodeCount);
+                if(nodeCount > 1){ //处理 insert into table (a,b) ...的情况，获取其中的a、b列，用于后面的过滤
+					ASTNode peerNode = (ASTNode)ast.getParent().getChild(1);
+					if(peerNode.getType() == HiveParser.TOK_TABCOLNAME){
+						for(int i=0; i <peerNode.getChildCount(); i++){
+							ASTNode columnNode =(ASTNode) peerNode.getChild(i);
+							String columnName = BaseSemanticAnalyzer.getUnescapedName(columnNode);
+							insertColumns.add(columnName);
+						}
+					}
+				}
+                MetaCache.getInstance().init(tableOut2, insertColumns); //初始化数据，供以后使用
                 break;
                 //from语句
             case HiveParser.TOK_TABREF:// inputTable
@@ -282,7 +294,10 @@ public class LineParser {
                 break;
             case HiveParser.TOK_WHERE: //3、过滤条件的处理select类
         		conditions.add(CON_WHERE + getBlockIteral((ASTNode) ast.getChild(0)).getCondition());
-                break; 
+                break;
+                //TODO wit-clause 的处理
+				//TODO from... insert ... insert...的验证
+				//TODO union distinct的验证
             default:
             	/** 
             	 * (or 
@@ -372,6 +387,9 @@ public class LineParser {
 	 * @return
 	 */
 	private Block getBlockIteral(ASTNode ast) {
+		if(ast == null){ //处理如: SELECT /*+ MAPJOIN(dc_dim_sale_name) */ 的无条件join情形
+			return new Block();
+		}
 		if (ast.getType() == HiveParser.KW_OR
 			||ast.getType() == HiveParser.KW_AND) {
 			Block bk1 = getBlockIteral((ASTNode)ast.getChild(0));
@@ -675,7 +693,7 @@ public class LineParser {
                 case HiveParser.TOK_LEFTOUTERJOIN:
                 case HiveParser.TOK_JOIN:
                 case HiveParser.TOK_LEFTSEMIJOIN:
-        		case HiveParser.TOK_MAPJOIN:
+//        		case HiveParser.TOK_MAPJOIN:
         		case HiveParser.TOK_FULLOUTERJOIN:
         		case HiveParser.TOK_UNIQUEJOIN:
                 	joinStack.push(joinClause);
@@ -700,7 +718,7 @@ public class LineParser {
             case HiveParser.TOK_LEFTOUTERJOIN:
             case HiveParser.TOK_JOIN:
             case HiveParser.TOK_LEFTSEMIJOIN:
-    		case HiveParser.TOK_MAPJOIN:
+//    		case HiveParser.TOK_MAPJOIN:
     		case HiveParser.TOK_FULLOUTERJOIN:
     		case HiveParser.TOK_UNIQUEJOIN:
             	joinClause = joinStack.pop();
@@ -852,7 +870,8 @@ public class LineParser {
 				}
 			}
 		}
-		
+
+		//从元数据库中dbMap补全字段信息
 		for (Entry<String, List<ColLine>> entry : map.entrySet()) {
 			String table = entry.getKey();
 			List<ColLine> pList = entry.getValue();

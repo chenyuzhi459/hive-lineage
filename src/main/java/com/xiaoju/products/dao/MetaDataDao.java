@@ -22,11 +22,13 @@ public class MetaDataDao {
 	public List<ColumnNode> getColumn(String db, String table){
     	String sqlWhere  = "1 = 1" + (Check.isEmpty(db) ? " " : (" and name='"+db+"'"));
     	List<ColumnNode> colList = new ArrayList<ColumnNode>();
-    	String sql = "select columns.\"COLUMN_NAME\" as column_name, columns.\"INTEGER_IDX\" as column_index, merges.table_id, merges.table_name, merges.db_name, merges.db_id  from \"COLUMNS_V2\" columns join " +
-					"(SELECT \"TBL_ID\" as table_id, \"TBL_NAME\" as table_name, db.\"NAME\" as db_name, db.\"DB_ID\" as db_id FROM \"TBLS\" tb join " +
-					"(SELECT \"NAME\", \"DB_ID\" from \"DBS\") db " +
-					"on tb.\"DB_ID\"=db.\"DB_ID\" where tb.\"TBL_NAME\"='%s' and db.\"NAME\" ='%s' ) merges " +
-					"on (columns.\"CD_ID\" = merges.table_id)  order by columns.\"INTEGER_IDX\"";
+    	String sql = "select columns.`COLUMN_NAME` as column_name, columns.`INTEGER_IDX` as column_index, merges2.table_id, merges2.table_name, merges2.db_name, merges2.db_id  from `COLUMNS_V2` columns \n" +
+				"join  (select `CD_ID`, merges.* from `sds` sds1 \n" +
+				"  join (SELECT `SD_ID` ,`TBL_ID` as table_id, `TBL_NAME` as table_name, db.`NAME` as db_name, db.`DB_ID` as db_id FROM `TBLS` tb \n" +
+				"    join (SELECT `NAME`, `DB_ID` from `DBS`) db \n" +
+				"    on (tb.`DB_ID`=db.`DB_ID`) where tb.`TBL_NAME`='%s' and db.`NAME` ='%s' ) merges \n" +
+				"  on (sds1.`SD_ID` = merges.`SD_ID`)) merges2 \n" +
+				"on columns.`CD_ID` = merges2.`CD_ID`   order by columns.`INTEGER_IDX`";
     	String repalceSql = String.format(sql, table, db);
     	
 		try {

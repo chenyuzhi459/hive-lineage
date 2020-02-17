@@ -1,9 +1,6 @@
 package com.xiaoju.products.util;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.xiaoju.products.bean.ColumnNode;
 import com.xiaoju.products.dao.MetaDataDao;
@@ -22,16 +19,35 @@ public class MetaCache {
 	private static Map<String, Long> tableMap = new HashMap<String, Long>();
 	private static Map<String, String> columnMap = new HashMap<String, String>();
 
-	public void init(String table){
+	public void init(String table, List<String> usedColumns){
 		String[] pdt = ParseUtil.parseDBTable(table);
 		List<ColumnNode> list = dao.getColumn(pdt[0], pdt[1]);
+		List<ColumnNode> filterList = new ArrayList<>(list.size());
 		if (Check.notEmpty(list)) {
-			cMap.put(table.toLowerCase(), list);
-			tableMap.put(table.toLowerCase(), list.get(0).getTableId());
-			for (ColumnNode cn : list) {
+			if(!usedColumns.isEmpty()){
+				for(String columnName : usedColumns){
+					ColumnNode columnNode = list.stream().filter(cl -> cl.getColumn().toLowerCase().equals(columnName.toLowerCase()))
+							.findFirst().orElse(null);
+					if(columnNode != null){
+						filterList.add(columnNode);
+					}
+				}
+				if(filterList.size() < usedColumns.size()){ //存在错误字段
+					filterList = list;
+				}
+			} else {
+				filterList = list;
+			}
+			cMap.put(table.toLowerCase(), filterList);
+			tableMap.put(table.toLowerCase(), filterList.get(0).getTableId());
+			for (ColumnNode cn : filterList) {
 				columnMap.put((cn.getDb()+"."+cn.getTable()+"."+cn.getColumn()).toLowerCase(),cn.getId());
 			}
 		}
+	}
+
+	public void init(String table){
+		this.init(table, Collections.emptyList());
 	}
 	
 	public void release(){
