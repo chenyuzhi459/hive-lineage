@@ -93,8 +93,8 @@ public class LineParserTest extends TestCase {
 		
 		Set<String> clone1 = clone(conditions);
 		Set<String> fromNameSet1 = new LinkedHashSet<String>();
-		fromNameSet1.add("app.hand_qq_passenger.statid");
-		ColLine col1 = new ColLine("statid", null, fromNameSet1, clone1, null, null);
+		fromNameSet1.add("app.hand_qq_passenger&app.return_benefit_base_foo.statid");
+		ColLine col1 = new ColLine("statid", "app.hand_qq_passenger&app.return_benefit_base_foo.statid", fromNameSet1, clone1, null, null);
 		lineSetExpected.add(col1);
 		
 		SQLResult sr = srList.get(0);
@@ -238,7 +238,7 @@ public class LineParserTest extends TestCase {
 		Set<String> outputTablesActual;
 		Set<String> inputTablesActual;
 		List<ColLine> lineListActualed; 
-		String sql = "use dw;insert into table dest select 1+1 as num, params['cid'] as maptest,arr[0] as arrtest,CONCAT(year,month,day) as date " +
+		String sql = "use dw;insert into table dest select 1+1 as num, params['cid'] as maptest,arr[0] as arrtest,CONCAT(year,month,day) as date2 " +
 				"from test ";
 		List<SQLResult> srList = parse.parse(sql);
 		inputTablesExpected.add("dw.test");
@@ -268,7 +268,7 @@ public class LineParserTest extends TestCase {
 		fromNameSet4.add("dw.test.year");
 		fromNameSet4.add("dw.test.month");
 		fromNameSet4.add("dw.test.day");
-		ColLine col4 = new ColLine("date", null, fromNameSet4, clone4, null, null);
+		ColLine col4 = new ColLine("date2", null, fromNameSet4, clone4, null, null);
 		lineSetExpected.add(col1);
 		lineSetExpected.add(col2);
 		lineSetExpected.add(col3);
@@ -394,8 +394,48 @@ public class LineParserTest extends TestCase {
 		assertCoLineSetEqual(lineSetExpected, lineListActualed);
 		printRestult(outputTablesActual, inputTablesActual, lineListActualed);
 	}
-	
-	
+
+    public void testParseWith() throws Exception{
+        Set<String> inputTablesExpected = new HashSet<String>();
+        Set<String> outputTablesExpected = new HashSet<String>();
+        Set<String> conditions = new HashSet<String>();
+        Set<ColLine> lineSetExpected = new HashSet<ColLine>();
+        Set<String> outputTablesActual;
+        Set<String> inputTablesActual;
+        List<ColLine> lineListActualed;
+
+        String sql = "with q1 as ( select key from src where key = '5'), q2 as ( select key, passwd from with1 a inner join with2 b on a.id = b.id) insert into table taobao.sample(uid, nonclk)  select q1.key, q2.passwd from q1 join q2 on q1.key=q2.key";
+        List<SQLResult> srList = parse.parse(sql);
+        inputTablesExpected.add("default.src");
+        inputTablesExpected.add("default.with1");
+        inputTablesExpected.add("default.with2");
+        outputTablesExpected.add("taobao.sample");
+
+        conditions.add("JOIN:default.with1.id = default.with2.id");
+		conditions.add("JOIN:default.src.key = default.with2&default.with1.key");
+		conditions.add("WHERE:default.src.key = '5'");
+
+        Set<String> clone1 = clone(conditions);
+        Set<String> fromNameSet1 = new LinkedHashSet<String>();
+        fromNameSet1.add("default.src.key");
+        ColLine col1 = new ColLine("key", null, fromNameSet1, clone1, null, null);
+        Set<String> clone2 = clone(conditions);
+        Set<String> fromNameSet2 = new LinkedHashSet<String>();
+        fromNameSet2.add("default.with2&default.with1.passwd");
+        ColLine col2 = new ColLine("passwd", "default.with2&default.with1.passwd", fromNameSet2, clone2, null, null);
+        lineSetExpected.add(col1);
+        lineSetExpected.add(col2);
+
+        SQLResult sr = srList.get(0);
+        outputTablesActual = sr.getOutputTables();
+        inputTablesActual = sr.getInputTables();
+        lineListActualed = sr.getColLineList();
+        assertSetEquals(outputTablesExpected, outputTablesActual);
+        assertSetEquals(inputTablesExpected, inputTablesActual);
+        assertCoLineSetEqual(lineSetExpected, lineListActualed);
+        printRestult(outputTablesActual, inputTablesActual, lineListActualed);
+    }
+
 
 	/**
 	 * 支持解析
@@ -418,7 +458,7 @@ public class LineParserTest extends TestCase {
 		
 		String sql25 = "from(select p.datekey datekey, p.userid	userid, c.clienttype " +
 				"from detail.usersequence_client c join fact.orderpayment p on (p.orderid > c.orderid or p.a = c.b) and p.aaa=c.bbb " +
-				"full outer join dim.user du on du.userid = p.userid where p.datekey = '20131118' and (du.userid in (111,222) or hash(p.test) like '%123%')) base " +
+				"full outer join dim.users du on du.userid = p.userid where p.datekey = '20131118' and (du.userid in (111,222) or hash(p.test) like '%123%')) base " +
 				
 				"insert overwrite table test.customer_kpi select concat(base.datekey,1,2) as aaa, " +
 				"case when base.userid > 5 then base.clienttype when base.userid > 1 then base.datekey+5 else 1-base.clienttype end bbbaaa,count(distinct hash(base.userid)) buyer_count " +
@@ -426,12 +466,12 @@ public class LineParserTest extends TestCase {
 		List<SQLResult> srList = parse.parse(sql25);
 		inputTablesExpected.add("detail.usersequence_client");
 		inputTablesExpected.add("fact.orderpayment");
-		inputTablesExpected.add("dim.user");
+		inputTablesExpected.add("dim.users");
 		outputTablesExpected.add("test.customer_kpi");
 		
 		conditions.add("JOIN:((fact.orderpayment.orderid > detail.usersequence_client.orderid or fact.orderpayment.a = detail.usersequence_client.b) and fact.orderpayment.aaa = detail.usersequence_client.bbb)");
-		conditions.add("WHERE:(fact.orderpayment.datekey = '20131118' and (dim.user.userid in (111,222) or hash(fact.orderpayment.test) like '%123%'))");
-		conditions.add("FULLOUTERJOIN:dim.user.userid = fact.orderpayment.userid");
+		conditions.add("WHERE:(fact.orderpayment.datekey = '20131118' and (dim.users.userid in (111,222) or hash(fact.orderpayment.test) like '%123%'))");
+		conditions.add("FULLOUTERJOIN:dim.users.userid = fact.orderpayment.userid");
 		conditions.add("WHERE:fact.orderpayment.userid isnotnull");
 		
 		Set<String> clone1 = clone(conditions);
