@@ -31,8 +31,9 @@ public class LineParserTest extends TestCase {
 		Set<String> outputTablesActual;
 		Set<String> inputTablesActual;
 		List<ColLine> lineListActualed;
-		String sql1 = "create table target_table LOCATION '/data/location' as select a from source_table;" +
-				"create table target_table2 LOCATION '/data/location' as select a2 from source_table2;";
+//		String sql1 = "create table target_table LOCATION '/data/location' as select a from source_table;" +
+//				"create table target_table2 LOCATION '/data/location' as select a2 from source_table2;";
+		String sql1 = "create table target_table as select concat(a.distinct_id, xingye_0608.distinct_id),a.gender from tag_test a  join xingye_0608 on (a.day = xingye_0608.pro_attribute) limit 1;" ;
 		List<SQLResult> srList = parse.parse(sql1);
 		inputTablesExpected.add("default.source_table");
 		outputTablesExpected.add("default.target_table");

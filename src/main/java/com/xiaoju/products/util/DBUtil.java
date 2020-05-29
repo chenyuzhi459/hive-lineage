@@ -65,11 +65,15 @@ public class DBUtil {
 		ResultSet rs = null;
 		try {
 			setConn();
+			ResultSet rs2 = conn.getMetaData().getColumns("default", null, "tag_test", null);
+			while (rs2.next()){
+				System.out.println(rs2.getRow());
+			}
 			stmt = conn.createStatement(
 					java.sql.ResultSet.TYPE_SCROLL_INSENSITIVE,
 					java.sql.ResultSet.CONCUR_READ_ONLY);
 			rs = stmt.executeQuery(sql);
-			List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();	
+			List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
 			while (rs.next()) {
 				Map<String, Object> map = rowToMap(rs, rs.getRow());
 				list.add(map);
